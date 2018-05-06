@@ -1,0 +1,55 @@
+### cfg vip in centos
+本文旨在说明在centos系统里配置虚拟IP（vip）的步骤。
+
+首先我们来看看系统中网络配置相关的知识：
+centos系统中网络相关的配置文件都保存在/etc/sysconfig/network-scripts目录下。该目录下主要有如下几类文件：
+1. ifcfg-X 配置文件
+2. ifup-X 脚本文件
+3. ifdown-X 脚本文件
+
+其中ifcfg-X就是系统启动时使用的配置文件，如ifcfg-eth0就是系统启动时用来配置eth0网络设备的配置文件。而ifup-X和ifdown-X则是控制脚本，分别用来控制网络设备的启停，如ifup-eth和ifdown-eth分别是用来启动和停止以太网设备驱动。更早期的网络控制命令是ifconfig，ifconfig和ifup/ifdown最终都是调用系统调用ioctl来实现对应的功能。尽管ifconfig也是用来启动网络设备驱动，但是和ifup比起来，还是有很多不足：ifconfig激活网络设备之后，不会自动配置其IP地址，也不会自动配置静态路由信息。而ifup则可以，因为ifup会读取ifcfg-X配置文件的内容，并自动设置。
+
+现在，我们再来看看网卡配置文件的具体内容：
+	DEVICE="eth0"
+	BOOTPROTO="dhcp"
+	ONBOOT="yes"
+	TYPE="Ethernet"
+	PERSISTENT_DHCLIENT="yes"
+这是个非常简答的配置文件，指定了以太网络设备的名称为eth0，在系统启动时需要被激活，并且使用dhcp协议自动获取其IP地址。
+
+在掌握了以上知识之后，我们再来看如何配置vip。
+vip的核心是ip aliasing，这项技术目前绝大多数系统都支持。当我们为同一个网卡命名了多个别名，并分别为每个别名都指定一个特殊的IP地址及路由之后，这个网卡就充当了多网卡的作用。
+
+ifconfig和ip命令都能够用来添加vip：
+	# sudo ifconfig eth0:1 192.168.10.10 netmask 255.255.255.0 up
+	# sudo ip addr add 192.168.10.10/24 dev eth0
+添加完成后可以使用ifconfig -a和ip addr show命令来查看其效果。使用命令行来配置有个最大的问题：系统重启之后，配置就失效了。如果想要永久地是配置生效，还得使用下面介绍的方法。
+
+假设我们需要设置两个vip。命令如下：
+	# cd /etc/sysconfig/network-scripts/
+	# cp ifcfg-eth0 ifcfg-eth0:0
+	# cp ifcfg-eth0 ifcfg-eth0:1
+接着分别对每个配置文件进行设置：
+	DEVICE="eth0:X"
+	BOOTPROTO=static
+	ONBOOT=yes
+	TYPE="Ethernet"
+	IPADDR=10.X.X.X
+	NETMASK=255.255.0.0
+	GATEWAY=10.X.X.1
+	HWADDR=00:0C:29:XX:XX:XX
+当完成对ifcfg-eth0:0和ifcfg-eth0:1两个网卡的配置之后，就可以执行/etc/init.d/network restart命令来重启网卡，以使新配置生效。最后，我们可以使用ip addr show命令来验证配置是否生效。也可以直接使用ping命令来访问vip。
+
+当需要配置大量vip，且其地址连续时，如果还使用上面的方法，虽然可行，但是比较繁杂。系统还提供了另一种更加简洁的方式来配置vips。使用range类型配置文件：
+	# cp -p ifcfg-eth0 ifcfg-eth0-range0
+然后设置配置文件内容：
+	#DEVICE="eth0"
+	#BOOTPROTO=none
+	#NM_CONTROLLED="yes"
+	#ONBOOT=yes
+	TYPE="Ethernet"
+	IPADDR_START=172.16.16.126
+	IPADDR_END=172.16.16.130
+	IPV6INIT=no
+	#GATEWAY=172.16.16.100
+最后同样使用/etc/init.d/network restart来重启网络使新配置生效。
