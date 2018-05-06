@@ -23,7 +23,8 @@ vip的核心是ip aliasing，这项技术目前绝大多数系统都支持。当
 ifconfig和ip命令都能够用来添加vip：
 	# sudo ifconfig eth0:1 192.168.10.10 netmask 255.255.255.0 up
 	# sudo ip addr add 192.168.10.10/24 dev eth0
-添加完成后可以使用ifconfig -a和ip addr show命令来查看其效果。使用命令行来配置有个最大的问题：系统重启之后，配置就失效了。如果想要永久地是配置生效，还得使用下面介绍的方法。
+添加完成后可以使用ifconfig -a和ip addr show命令来查看其效果。
+使用命令行来配置有个最大的问题：系统重启之后，配置就失效了。如果想要永久地是配置生效，还得使用下面介绍的方法。
 
 假设我们需要设置两个vip。命令如下：
 	# cd /etc/sysconfig/network-scripts/
