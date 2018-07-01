@@ -1,5 +1,5 @@
 ### 1. socket连接
-说起socket编程，闹钟浮现的肯定是下面这张图：
+说起socket编程，脑中浮现的肯定是下面这张图：
 ```
 +----------------------------------------+               +----------------------------------------+
 |                client                  |               |                server                  |
@@ -48,7 +48,7 @@
 ### 2. accept内核实现简述[1]
 当线程想要监听一个tcp连接请求，那么它只需创建一个socket，并调用accept系统调用即可。accept系统调用会最终会调用tcp协议提供的tcp_accept处理相关工作，涉及到的数据结构主要有：线程状态、socket等待队列。其中线程状态由task_struct中的state字段来描述，线程的状态集合包含：运行中、睡眠中、等待事件中等。
 
-如果一个线程调用了accept，则将其线程状态从TASK_RUNNIGN设置为TASK_INTERRUPTIBLE，并将线程描述符放到对应socket的等待队列中。结果就是线程进入了睡眠状态。如果有多个线程都执行了如上操作，则依次将多个线程添加到socket等待队列中。注意，只有在同一个socket上调用accept函数，才会将所有线程加到一个队列。
+如果一个线程调用了accept，tcp_accept会将其线程状态从TASK_RUNNIGN设置为TASK_INTERRUPTIBLE，并将线程描述符放到对应socket的等待队列中。结果就是线程进入了等待状态。如果有多个线程都执行了如上操作，则依次将多个线程添加到socket等待队列中。注意，只有在同一个socket上调用accept函数，才会将所有线程加到一个队列。
 
 而当有客户端发起一个请求时，网卡驱动会将数据包传递至内核，并交由tcp_v4_recv函数来处理。函数发现该请求想要和一个正在accept的socket建立连接，它就会调用wake_up_interruptible函数，唤醒等待队列中的线程，并由该线程去处理这个连接。
 
@@ -85,7 +85,7 @@ sock->error_report
 
 本方案最大的好处是，仅对tcp协议簇有影响。等验证wake_one_interruptible方法对所有协议有效之后，其实可以使用wake_one_interruptible方法替代wake_up_interruptible，并将其作为默认默认方法即可。
 
-经实验验证[1]，以上两种方案都能解决惊群问题，并使得accept性能大幅提升。
+经实验验证[1]，以上两种方案都能解决惊群问题，并使得accept性能大幅提升。在新版本linux内核中，惊群问题已不复存在。
 
 ### reference
 [1]. accept() scalability on linux
