@@ -108,3 +108,4 @@ SWS 昵称傻逼窗口综合征^_^。其病状就是发送端持续发送 tinygr
 ### Reference
 1. https://www.ietf.org/archive/id/draft-minshall-nagle-01.txt
 2. https://www.extrahop.com/company/blog/2016/tcp-nodelay-nagle-quickack-best-practices/
+3. https://forums.extrahop.com/t/what-is-silly-window-syndrome-extrahop/1563
